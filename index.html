@@ -1,1 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Игровая комната</title>
+<style>
+:root{--bg:#f6f4ff;--card:#fff;--text:#1d1b2e;--muted:#6b6880;--accent:#6c4cf1;--accent2:#ff6b8b;--line:#e3dfff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15131f;--card:#201d30;--text:#f1eefc;--muted:#a29fbb;--accent:#8b72ff;--accent2:#ff7f9c;--line:#33304a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15131f;--card:#201d30;--text:#f1eefc;--muted:#a29fbb;--accent:#8b72ff;--accent2:#ff7f9c;--line:#33304a;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.4}
+.wrap{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:28px;margin:8px 0 4px}
+.sub{color:var(--muted);margin:0 0 18px}
+.tabs{display:flex;gap:8px;margin-bottom:16px;overflow-x:auto}
+.tabs button{flex:1;min-width:max-content;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:15px;cursor:pointer}
+.tabs button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px}
+.status{text-align:center;font-weight:600;min-height:26px;margin-bottom:12px}
+.btn{display:block;margin:14px auto 0;padding:10px 20px;border:0;border-radius:12px;background:var(--accent2);color:#fff;font-size:15px;cursor:pointer}
+.ttt{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:300px;margin:0 auto}
+.ttt button{aspect-ratio:1;font-size:40px;font-weight:700;border-radius:14px;border:1px solid var(--line);background:var(--bg);color:var(--accent);cursor:pointer}
+.ttt button.o{color:var(--accent2)}
+.mem{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mem button{aspect-ratio:1;font-size:30px;border-radius:14px;border:1px solid var(--line);background:var(--accent);color:#fff;cursor:pointer}
+.mem button.open{background:var(--bg);color:var(--text)}
+.mem button.done{background:var(--bg);opacity:.45}
+.g{display:flex;gap:8px}
+.g input{flex:1;min-width:0;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:16px}
+.g button{padding:12px 18px;border:0;border-radius:12px;background:var(--accent);color:#fff;font-size:15px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎮 Игровая комната</h1>
+  <p class="sub">Три мини-игры на пару минут</p>
+  <div class="tabs" id="tabs">
+    <button data-t="ttt" class="on">Крестики-нолики</button>
+    <button data-t="mem">Память</button>
+    <button data-t="num">Угадай число</button>
+  </div>
+  <div class="card" id="view"></div>
+</div>
+<script>
+const view=document.getElementById('view');
+const tabs=document.getElementById('tabs');
+tabs.onclick=e=>{const t=e.target.dataset.t;if(!t)return;[...tabs.children].forEach(b=>b.classList.toggle('on',b===e.target));games[t]()};
 
+const games={
+ttt(){
+  let b=Array(9).fill(''),over=false;
+  const L=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  const win=p=>L.some(l=>l.every(i=>b[i]===p));
+  view.innerHTML='<div class="status" id="s">Ваш ход (✕)</div><div class="ttt" id="bd"></div><button class="btn" id="r">Заново</button>';
+  const s=view.querySelector('#s'),bd=view.querySelector('#bd');
+  function draw(){bd.innerHTML='';b.forEach((v,i)=>{const c=document.createElement('button');c.textContent=v;if(v==='O')c.className='o';c.onclick=()=>play(i);bd.appendChild(c)})}
+  function end(){if(win('X')){s.textContent='Вы победили! 🎉';return over=true}
+    if(win('O')){s.textContent='Выиграл компьютер 🤖';return over=true}
+    if(b.every(x=>x)){s.textContent='Ничья 🤝';return over=true}return false}
+  function bot(){
+    const free=b.map((v,i)=>v?null:i).filter(i=>i!==null);
+    const tryP=p=>free.find(i=>{b[i]=p;const w=win(p);b[i]='';return w});
+    let m=tryP('O');if(m===undefined)m=tryP('X');
+    if(m===undefined)m=b[4]===''?4:free[Math.floor(Math.random()*free.length)];
+    b[m]='O'}
+  function play(i){if(over||b[i])return;b[i]='X';if(!end()){bot();if(!end())s.textContent='Ваш ход (✕)'}draw()}
+  view.querySelector('#r').onclick=games.ttt;draw()
+},
+mem(){
+  const em=['🐱','🐶','🦊','🐼','🐸','🦄','🐙','🐝'];
+  const cards=[...em,...em].sort(()=>Math.random()-.5);
+  let open=[],done=0,moves=0,lock=false;
+  view.innerHTML='<div class="status" id="s">Ходов: 0</div><div class="mem" id="bd"></div><button class="btn" id="r">Заново</button>';
+  const s=view.querySelector('#s'),bd=view.querySelector('#bd');
+  cards.forEach((e,i)=>{const c=document.createElement('button');c.textContent='?';
+    c.onclick=()=>{if(lock||c.classList.contains('open')||c.classList.contains('done'))return;
+      c.textContent=e;c.classList.add('open');open.push([c,e]);
+      if(open.length===2){moves++;s.textContent='Ходов: '+moves;lock=true;
+        const [[a,x],[d,y]]=open;
+        setTimeout(()=>{if(x===y){a.className='done';d.className='done';done++;
+            if(done===8)s.textContent='Победа за '+moves+' ходов! 🎉'}
+          else{[a,d].forEach(k=>{k.className='';k.textContent='?'})}
+          open=[];lock=false},700)}};
+    bd.appendChild(c)});
+  view.querySelector('#r').onclick=games.mem
+},
+num(){
+  let n=1+Math.floor(Math.random()*100),tries=0;
+  view.innerHTML='<div class="status" id="s">Я загадал число от 1 до 100</div><div class="g"><input id="i" type="number" inputmode="numeric" placeholder="Ваш вариант"><button id="go">Проверить</button></div><button class="btn" id="r">Новая игра</button>';
+  const s=view.querySelector('#s'),i=view.querySelector('#i');
+  function go(){const v=+i.value;if(!v)return;tries++;
+    s.textContent=v===n?'Угадали за '+tries+' попыток! 🎉':v<n?'Больше ⬆️ (попыток: '+tries+')':'Меньше ⬇️ (попыток: '+tries+')';i.value=''}
+  view.querySelector('#go').onclick=go;i.onkeydown=e=>{if(e.key==='Enter')go()};
+  view.querySelector('#r').onclick=games.num
+}};
+games.ttt();
+</script>
+</body>
+</html>
